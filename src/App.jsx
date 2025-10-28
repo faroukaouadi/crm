@@ -87,9 +87,9 @@ function App() {
       case 'invoices':
         return <InvoicesTable invoices={recentInvoices} />
       case 'clients':
-        return <ClientsTable clients={recentClients} />
+        return <ClientsTable currentUser={user} />
       case 'companies':
-        return <CompaniesTable companies={companies} />
+        return <CompaniesTable currentUser={user} />
       case 'quotes':
         return <QuotesTable quotes={quotes} />
       case 'reports':
