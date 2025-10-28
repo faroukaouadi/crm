@@ -58,12 +58,12 @@ export const quotes = [
 ]
 
 export const navigationItems = [
-  { id: 'dashboard', label: 'Tableau de bord', icon: '📊' },
-  { id: 'invoices', label: 'Factures', icon: '💰' },
+  { id: 'dashboard', label: 'Dashboard', icon: '📊' },
+  { id: 'invoices', label: 'Invoices', icon: '💰' },
   { id: 'clients', label: 'Clients', icon: '👥' },
-  { id: 'companies', label: 'Sociétés', icon: '🏢' },
-  { id: 'quotes', label: 'Devis', icon: '📄' },
-  { id: 'reports', label: 'Rapports', icon: '📈' }
+  { id: 'companies', label: 'Companies', icon: '🏢' },
+  { id: 'quotes', label: 'Quotes', icon: '📄' },
+  { id: 'reports', label: 'Reports', icon: '📈' }
 ]
 
 // Données pour les graphiques

@@ -1,7 +1,7 @@
 import React from 'react'
 import { UserDropdown } from '../ui/UserDropdown'
 
-export const Header = ({ onLogout }) => (
+export const Header = ({ onLogout, user, onShowProfile }) => (
   <header className="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
     <div className="px-6 py-4 flex items-center justify-between">
       <div className="flex items-center space-x-3">
@@ -14,7 +14,7 @@ export const Header = ({ onLogout }) => (
         <button className="bg-gray-100 dark:bg-gray-700 rounded-full p-2 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors">
           <span className="text-lg">🔔</span>
         </button>
-        <UserDropdown onLogout={onLogout} />
+        <UserDropdown onLogout={onLogout} user={user} onShowProfile={onShowProfile} />
       </div>
     </div>
   </header>
