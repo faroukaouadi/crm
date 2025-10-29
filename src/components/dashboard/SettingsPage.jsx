@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { SectionHeader } from '../ui/StatCard'
 import settingsService from '../../services/settingsService'
+import { useNotification } from '../../contexts/NotificationContext'
 
 export const SettingsPage = ({ onClose }) => {
   const [companyInfo, setCompanyInfo] = useState({
@@ -24,8 +25,7 @@ export const SettingsPage = ({ onClose }) => {
   })
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
-  const [error, setError] = useState('')
-  const [success, setSuccess] = useState('')
+  const { showSuccess, showError } = useNotification()
 
   useEffect(() => {
     loadCompanyInfo()
@@ -33,16 +33,15 @@ export const SettingsPage = ({ onClose }) => {
 
   const loadCompanyInfo = async () => {
     setIsLoading(true)
-    setError('')
     try {
       const result = await settingsService.getCompanyInfo()
       if (result.success) {
         setCompanyInfo(result.companyInfo)
       } else {
-        setError(result.error || 'Error loading company information')
+        showError(result.error || 'Error loading company information')
       }
     } catch (error) {
-      setError('Server connection error')
+      showError('Server connection error')
     } finally {
       setIsLoading(false)
     }
@@ -71,19 +70,17 @@ export const SettingsPage = ({ onClose }) => {
   const handleSubmit = async (e) => {
     e.preventDefault()
     setIsSaving(true)
-    setError('')
-    setSuccess('')
 
     try {
       const result = await settingsService.updateCompanyInfo(companyInfo)
       if (result.success) {
-        setSuccess('Company information updated successfully!')
+        showSuccess('Company information updated successfully!')
         setCompanyInfo(result.companyInfo)
       } else {
-        setError(result.error || 'Error updating company information')
+        showError(result.error || 'Error updating company information')
       }
     } catch (error) {
-      setError('Server connection error')
+      showError('Server connection error')
     } finally {
       setIsSaving(false)
     }
@@ -104,25 +101,6 @@ export const SettingsPage = ({ onClose }) => {
         title="Company Settings" 
         subtitle="Manage your company information used in invoices and quotes"
       />
-
-      {/* Error/Success Messages */}
-      {error && (
-        <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl">
-          <div className="flex items-center">
-            <span className="text-red-500 text-lg mr-2">⚠️</span>
-            <p className="text-red-700 dark:text-red-300 text-sm font-medium">{error}</p>
-          </div>
-        </div>
-      )}
-
-      {success && (
-        <div className="p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl">
-          <div className="flex items-center">
-            <span className="text-green-500 text-lg mr-2">✅</span>
-            <p className="text-green-700 dark:text-green-300 text-sm font-medium">{success}</p>
-          </div>
-        </div>
-      )}
 
       <form onSubmit={handleSubmit} className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
         {/* Basic Information */}

@@ -193,10 +193,48 @@ invoiceSchema.pre('save', function(next) {
 // Pre-save middleware to generate invoice number
 invoiceSchema.pre('save', async function(next) {
   if (this.isNew && !this.invoiceNumber) {
-    const count = await this.constructor.countDocuments();
-    this.invoiceNumber = `INV-${String(count + 1).padStart(6, '0')}`;
+    try {
+      // Get all existing invoice numbers
+      const existingInvoices = await this.constructor.find({ invoiceNumber: { $exists: true, $ne: null } }, { invoiceNumber: 1 });
+      
+      let nextNumber = 1;
+      if (existingInvoices.length > 0) {
+        // Extract numbers and find the maximum
+        const numbers = existingInvoices
+          .map(inv => {
+            const match = inv.invoiceNumber?.match(/INV-(\d+)/);
+            return match ? parseInt(match[1], 10) : 0;
+          })
+          .filter(num => num > 0);
+        
+        if (numbers.length > 0) {
+          nextNumber = Math.max(...numbers) + 1;
+        }
+      }
+      
+      // Find the next available unique invoice number
+      let invoiceNumber = `INV-${String(nextNumber).padStart(6, '0')}`;
+      let exists = await this.constructor.findOne({ invoiceNumber });
+      
+      // If number exists, increment until we find an available one
+      while (exists && nextNumber < 999999) {
+        nextNumber++;
+        invoiceNumber = `INV-${String(nextNumber).padStart(6, '0')}`;
+        exists = await this.constructor.findOne({ invoiceNumber });
+      }
+      
+      if (nextNumber >= 999999) {
+        return next(new Error('Unable to generate unique invoice number'));
+      }
+      
+      this.invoiceNumber = invoiceNumber;
+      next();
+    } catch (error) {
+      next(error);
+    }
+  } else {
+    next();
   }
-  next();
 });
 
 // Indexes

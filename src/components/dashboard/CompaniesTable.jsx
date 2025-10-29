@@ -4,17 +4,19 @@ import { StatusBadge } from '../ui/StatCard'
 import { SectionHeader } from '../ui/StatCard'
 import { formatCurrency } from '../../utils/helpers'
 import companyService from '../../services/companyService'
+import { useNotification } from '../../contexts/NotificationContext'
+import { ConfirmationModal } from '../ui/ConfirmationModal'
 
 export const CompaniesTable = ({ currentUser }) => {
   const [companies, setCompanies] = useState([])
   const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState('')
-  const [success, setSuccess] = useState('')
+  const { showSuccess, showError } = useNotification()
   const [editingCompany, setEditingCompany] = useState(null)
   const [isEditing, setIsEditing] = useState(false)
   const [isAdding, setIsAdding] = useState(false)
   const [expandedCompany, setExpandedCompany] = useState(null)
   const [companyClients, setCompanyClients] = useState({})
+  const [deleteConfirmation, setDeleteConfirmation] = useState({ isOpen: false, companyId: null })
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -50,16 +52,15 @@ export const CompaniesTable = ({ currentUser }) => {
 
   const loadCompanies = async () => {
     setIsLoading(true)
-    setError('')
     try {
       const result = await companyService.getCompanies()
       if (result.success) {
         setCompanies(result.companies)
       } else {
-        setError(result.error || 'Error loading companies')
+        showError(result.error || 'Error loading companies')
       }
     } catch (error) {
-      setError('Server connection error')
+      showError('Server connection error')
     } finally {
       setIsLoading(false)
     }
@@ -177,55 +178,55 @@ export const CompaniesTable = ({ currentUser }) => {
   const handleSubmit = async (e) => {
     e.preventDefault()
     setIsLoading(true)
-    setError('')
-    setSuccess('')
 
     try {
       let result
       if (isAdding) {
         result = await companyService.createCompany(formData)
         if (result.success) {
-          setSuccess('Company created successfully!')
+          showSuccess('Company created successfully!')
           setIsAdding(false)
           loadCompanies()
         } else {
-          setError(result.error || 'Error creating company')
+          showError(result.error || 'Error creating company')
         }
       } else {
         result = await companyService.updateCompany(editingCompany._id, formData)
         if (result.success) {
-          setSuccess('Company updated successfully!')
+          showSuccess('Company updated successfully!')
           setIsEditing(false)
           setEditingCompany(null)
           loadCompanies()
         } else {
-          setError(result.error || 'Error updating company')
+          showError(result.error || 'Error updating company')
         }
       }
     } catch (error) {
-      setError('Server connection error')
+      showError('Server connection error')
     } finally {
       setIsLoading(false)
     }
   }
 
-  const handleDelete = async (companyId) => {
-    if (!window.confirm('Are you sure you want to delete this company?')) {
-      return
-    }
+  const handleDelete = (companyId) => {
+    setDeleteConfirmation({ isOpen: true, companyId })
+  }
+
+  const confirmDelete = async () => {
+    if (!deleteConfirmation.companyId) return
 
     setIsLoading(true)
-    setError('')
     try {
-      const result = await companyService.deleteCompany(companyId)
+      const result = await companyService.deleteCompany(deleteConfirmation.companyId)
       if (result.success) {
-        setSuccess('Company deleted successfully!')
+        showSuccess('Company deleted successfully!')
+        setDeleteConfirmation({ isOpen: false, companyId: null })
         loadCompanies()
       } else {
-        setError(result.error || 'Error deleting company')
+        showError(result.error || 'Error deleting company')
       }
     } catch (error) {
-      setError('Server connection error')
+      showError('Server connection error')
     } finally {
       setIsLoading(false)
     }
@@ -235,8 +236,6 @@ export const CompaniesTable = ({ currentUser }) => {
     setIsEditing(false)
     setIsAdding(false)
     setEditingCompany(null)
-    setError('')
-    setSuccess('')
   }
 
   const toggleExpanded = async (companyId) => {
@@ -351,25 +350,6 @@ export const CompaniesTable = ({ currentUser }) => {
           </div>
         }
       />
-
-      {/* Error/Success Messages */}
-      {error && (
-        <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl">
-          <div className="flex items-center">
-            <span className="text-red-500 text-lg mr-2">⚠️</span>
-            <p className="text-red-700 dark:text-red-300 text-sm font-medium">{error}</p>
-          </div>
-        </div>
-      )}
-
-      {success && (
-        <div className="p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl">
-          <div className="flex items-center">
-            <span className="text-green-500 text-lg mr-2">✅</span>
-            <p className="text-green-700 dark:text-green-300 text-sm font-medium">{success}</p>
-          </div>
-        </div>
-      )}
 
       {/* Companies Table */}
       {isLoading ? (
@@ -790,6 +770,19 @@ export const CompaniesTable = ({ currentUser }) => {
           </div>
         </div>
       )}
+
+      {/* Delete Confirmation Modal */}
+      <ConfirmationModal
+        isOpen={deleteConfirmation.isOpen}
+        onClose={() => setDeleteConfirmation({ isOpen: false, companyId: null })}
+        onConfirm={confirmDelete}
+        title="Delete Company"
+        message="Are you sure you want to delete this company? This action cannot be undone."
+        confirmText="Delete"
+        cancelText="Cancel"
+        type="danger"
+        isLoading={isLoading}
+      />
     </div>
   )
 }

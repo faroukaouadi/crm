@@ -7,19 +7,21 @@ import invoiceService from '../../services/invoiceService'
 import clientService from '../../services/clientService'
 import pdfService from '../../services/pdfService'
 import { InvoiceView } from './InvoiceView'
+import { useNotification } from '../../contexts/NotificationContext'
+import { ConfirmationModal } from '../ui/ConfirmationModal'
 
 export const InvoicesTable = ({ currentUser }) => {
   const [invoices, setInvoices] = useState([])
   const [clients, setClients] = useState([])
   const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState('')
-  const [success, setSuccess] = useState('')
+  const { showSuccess, showError } = useNotification()
   const [editingInvoice, setEditingInvoice] = useState(null)
   const [isEditing, setIsEditing] = useState(false)
   const [isAdding, setIsAdding] = useState(false)
   const [isMarkingPaid, setIsMarkingPaid] = useState(false)
   const [viewingInvoice, setViewingInvoice] = useState(null)
   const [isViewing, setIsViewing] = useState(false)
+  const [deleteConfirmation, setDeleteConfirmation] = useState({ isOpen: false, invoiceId: null })
   const [formData, setFormData] = useState({
     client: '',
     issueDate: new Date().toISOString().split('T')[0],
@@ -49,16 +51,15 @@ export const InvoicesTable = ({ currentUser }) => {
 
   const loadInvoices = async () => {
     setIsLoading(true)
-    setError('')
     try {
       const result = await invoiceService.getInvoices()
       if (result.success) {
         setInvoices(result.invoices)
       } else {
-        setError(result.error || 'Error loading invoices')
+        showError(result.error || 'Error loading invoices')
       }
     } catch (error) {
-      setError('Server connection error')
+      showError('Server connection error')
     } finally {
       setIsLoading(false)
     }
@@ -126,10 +127,10 @@ export const InvoicesTable = ({ currentUser }) => {
     try {
       const result = await pdfService.generateInvoicePDFCustom(invoice)
       if (!result.success) {
-        setError(result.error || 'Error generating PDF')
+        showError(result.error || 'Error generating PDF')
       }
     } catch (error) {
-      setError('Error generating PDF')
+      showError('Error generating PDF')
     }
   }
 
@@ -217,33 +218,31 @@ export const InvoicesTable = ({ currentUser }) => {
   const handleSubmit = async (e) => {
     e.preventDefault()
     setIsLoading(true)
-    setError('')
-    setSuccess('')
 
     try {
       let result
       if (isAdding) {
         result = await invoiceService.createInvoice(formData)
         if (result.success) {
-          setSuccess('Invoice created successfully!')
+          showSuccess('Invoice created successfully!')
           setIsAdding(false)
           loadInvoices()
         } else {
-          setError(result.error || 'Error creating invoice')
+          showError(result.error || 'Error creating invoice')
         }
       } else {
         result = await invoiceService.updateInvoice(editingInvoice._id, formData)
         if (result.success) {
-          setSuccess('Invoice updated successfully!')
+          showSuccess('Invoice updated successfully!')
           setIsEditing(false)
           setEditingInvoice(null)
           loadInvoices()
         } else {
-          setError(result.error || 'Error updating invoice')
+          showError(result.error || 'Error updating invoice')
         }
       }
     } catch (error) {
-      setError('Server connection error')
+      showError('Server connection error')
     } finally {
       setIsLoading(false)
     }
@@ -252,43 +251,43 @@ export const InvoicesTable = ({ currentUser }) => {
   const handlePaymentSubmit = async (e) => {
     e.preventDefault()
     setIsLoading(true)
-    setError('')
-    setSuccess('')
 
     try {
       const result = await invoiceService.markInvoicePaid(editingInvoice._id, paymentData)
       if (result.success) {
-        setSuccess('Invoice marked as paid successfully!')
+        showSuccess('Invoice marked as paid successfully!')
         setIsMarkingPaid(false)
         setEditingInvoice(null)
         loadInvoices()
       } else {
-        setError(result.error || 'Error marking invoice as paid')
+        showError(result.error || 'Error marking invoice as paid')
       }
     } catch (error) {
-      setError('Server connection error')
+      showError('Server connection error')
     } finally {
       setIsLoading(false)
     }
   }
 
-  const handleDelete = async (invoiceId) => {
-    if (!window.confirm('Are you sure you want to delete this invoice?')) {
-      return
-    }
+  const handleDelete = (invoiceId) => {
+    setDeleteConfirmation({ isOpen: true, invoiceId })
+  }
+
+  const confirmDelete = async () => {
+    if (!deleteConfirmation.invoiceId) return
 
     setIsLoading(true)
-    setError('')
     try {
-      const result = await invoiceService.deleteInvoice(invoiceId)
+      const result = await invoiceService.deleteInvoice(deleteConfirmation.invoiceId)
       if (result.success) {
-        setSuccess('Invoice deleted successfully!')
+        showSuccess('Invoice deleted successfully!')
+        setDeleteConfirmation({ isOpen: false, invoiceId: null })
         loadInvoices()
       } else {
-        setError(result.error || 'Error deleting invoice')
+        showError(result.error || 'Error deleting invoice')
       }
     } catch (error) {
-      setError('Server connection error')
+      showError('Server connection error')
     } finally {
       setIsLoading(false)
     }
@@ -301,8 +300,6 @@ export const InvoicesTable = ({ currentUser }) => {
     setIsViewing(false)
     setEditingInvoice(null)
     setViewingInvoice(null)
-    setError('')
-    setSuccess('')
   }
 
   const getStatusBadge = (status) => {
@@ -402,25 +399,6 @@ export const InvoicesTable = ({ currentUser }) => {
           </div>
         }
       />
-
-      {/* Error/Success Messages */}
-      {error && (
-        <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl">
-          <div className="flex items-center">
-            <span className="text-red-500 text-lg mr-2">⚠️</span>
-            <p className="text-red-700 dark:text-red-300 text-sm font-medium">{error}</p>
-          </div>
-        </div>
-      )}
-
-      {success && (
-        <div className="p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl">
-          <div className="flex items-center">
-            <span className="text-green-500 text-lg mr-2">✅</span>
-            <p className="text-green-700 dark:text-green-300 text-sm font-medium">{success}</p>
-          </div>
-        </div>
-      )}
 
       {/* Invoices Table */}
       {isLoading ? (
@@ -815,6 +793,19 @@ export const InvoicesTable = ({ currentUser }) => {
           onDownloadPDF={handleDownloadPDF}
         />
       )}
+
+      {/* Delete Confirmation Modal */}
+      <ConfirmationModal
+        isOpen={deleteConfirmation.isOpen}
+        onClose={() => setDeleteConfirmation({ isOpen: false, invoiceId: null })}
+        onConfirm={confirmDelete}
+        title="Delete Invoice"
+        message="Are you sure you want to delete this invoice? This action cannot be undone."
+        confirmText="Delete"
+        cancelText="Cancel"
+        type="danger"
+        isLoading={isLoading}
+      />
     </div>
   )
 }

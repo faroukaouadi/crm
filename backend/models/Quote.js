@@ -212,10 +212,48 @@ quoteSchema.pre('save', function(next) {
 // Pre-save middleware to generate quote number
 quoteSchema.pre('save', async function(next) {
   if (this.isNew && !this.quoteNumber) {
-    const count = await this.constructor.countDocuments();
-    this.quoteNumber = `QUO-${String(count + 1).padStart(6, '0')}`;
+    try {
+      // Get all existing quote numbers
+      const existingQuotes = await this.constructor.find({ quoteNumber: { $exists: true, $ne: null } }, { quoteNumber: 1 });
+      
+      let nextNumber = 1;
+      if (existingQuotes.length > 0) {
+        // Extract numbers and find the maximum
+        const numbers = existingQuotes
+          .map(quote => {
+            const match = quote.quoteNumber?.match(/QUO-(\d+)/);
+            return match ? parseInt(match[1], 10) : 0;
+          })
+          .filter(num => num > 0);
+        
+        if (numbers.length > 0) {
+          nextNumber = Math.max(...numbers) + 1;
+        }
+      }
+      
+      // Find the next available unique quote number
+      let quoteNumber = `QUO-${String(nextNumber).padStart(6, '0')}`;
+      let exists = await this.constructor.findOne({ quoteNumber });
+      
+      // If number exists, increment until we find an available one
+      while (exists && nextNumber < 999999) {
+        nextNumber++;
+        quoteNumber = `QUO-${String(nextNumber).padStart(6, '0')}`;
+        exists = await this.constructor.findOne({ quoteNumber });
+      }
+      
+      if (nextNumber >= 999999) {
+        return next(new Error('Unable to generate unique quote number'));
+      }
+      
+      this.quoteNumber = quoteNumber;
+      next();
+    } catch (error) {
+      next(error);
+    }
+  } else {
+    next();
   }
-  next();
 });
 
 // Indexes

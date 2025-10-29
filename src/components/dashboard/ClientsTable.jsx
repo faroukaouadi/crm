@@ -5,17 +5,19 @@ import { SectionHeader } from '../ui/StatCard'
 import { formatCurrency } from '../../utils/helpers'
 import clientService from '../../services/clientService'
 import companyService from '../../services/companyService'
+import { useNotification } from '../../contexts/NotificationContext'
+import { ConfirmationModal } from '../ui/ConfirmationModal'
 
 export const ClientsTable = ({ currentUser }) => {
   const [clients, setClients] = useState([])
   const [companies, setCompanies] = useState([])
   const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState('')
-  const [success, setSuccess] = useState('')
+  const { showSuccess, showError } = useNotification()
   const [editingClient, setEditingClient] = useState(null)
   const [isEditing, setIsEditing] = useState(false)
   const [isAdding, setIsAdding] = useState(false)
   const [isAddingCompany, setIsAddingCompany] = useState(false)
+  const [deleteConfirmation, setDeleteConfirmation] = useState({ isOpen: false, clientId: null })
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -73,16 +75,15 @@ export const ClientsTable = ({ currentUser }) => {
 
   const loadClients = async () => {
     setIsLoading(true)
-    setError('')
     try {
       const result = await clientService.getClients()
       if (result.success) {
         setClients(result.clients)
       } else {
-        setError(result.error || 'Error loading clients')
+        showError(result.error || 'Error loading clients')
       }
     } catch (error) {
-      setError('Server connection error')
+      showError('Server connection error')
     } finally {
       setIsLoading(false)
     }
@@ -176,8 +177,6 @@ export const ClientsTable = ({ currentUser }) => {
   const handleSubmit = async (e) => {
     e.preventDefault()
     setIsLoading(true)
-    setError('')
-    setSuccess('')
 
     try {
       let result
@@ -185,48 +184,50 @@ export const ClientsTable = ({ currentUser }) => {
         // Create new client
         result = await clientService.createClient(formData)
         if (result.success) {
-          setSuccess('Client created successfully!')
+          showSuccess('Client created successfully!')
           setIsAdding(false)
           loadClients() // Reload the list
         } else {
-          setError(result.error || 'Error creating client')
+          showError(result.error || 'Error creating client')
         }
       } else {
         // Update existing client
         result = await clientService.updateClient(editingClient._id, formData)
         if (result.success) {
-          setSuccess('Client updated successfully!')
+          showSuccess('Client updated successfully!')
           setIsEditing(false)
           setEditingClient(null)
           loadClients() // Reload the list
         } else {
-          setError(result.error || 'Error updating client')
+          showError(result.error || 'Error updating client')
         }
       }
     } catch (error) {
-      setError('Server connection error')
+      showError('Server connection error')
     } finally {
       setIsLoading(false)
     }
   }
 
-  const handleDelete = async (clientId) => {
-    if (!window.confirm('Are you sure you want to delete this client?')) {
-      return
-    }
+  const handleDelete = (clientId) => {
+    setDeleteConfirmation({ isOpen: true, clientId })
+  }
+
+  const confirmDelete = async () => {
+    if (!deleteConfirmation.clientId) return
 
     setIsLoading(true)
-    setError('')
     try {
-      const result = await clientService.deleteClient(clientId)
+      const result = await clientService.deleteClient(deleteConfirmation.clientId)
       if (result.success) {
-        setSuccess('Client deleted successfully!')
+        showSuccess('Client deleted successfully!')
+        setDeleteConfirmation({ isOpen: false, clientId: null })
         loadClients() // Reload the list
       } else {
-        setError(result.error || 'Error deleting client')
+        showError(result.error || 'Error deleting client')
       }
     } catch (error) {
-      setError('Server connection error')
+      showError('Server connection error')
     } finally {
       setIsLoading(false)
     }
@@ -237,8 +238,6 @@ export const ClientsTable = ({ currentUser }) => {
     setIsAdding(false)
     setIsAddingCompany(false)
     setEditingClient(null)
-    setError('')
-    setSuccess('')
   }
 
   const handleAddCompany = () => {
@@ -304,13 +303,11 @@ export const ClientsTable = ({ currentUser }) => {
   const handleCompanySubmit = async (e) => {
     e.preventDefault()
     setIsLoading(true)
-    setError('')
-    setSuccess('')
 
     try {
       const result = await companyService.createCompany(companyFormData)
       if (result.success) {
-        setSuccess('Company created successfully!')
+        showSuccess('Company created successfully!')
         setIsAddingCompany(false)
         await loadCompanies() // Reload companies list
         // Set the newly created company as selected
@@ -319,10 +316,10 @@ export const ClientsTable = ({ currentUser }) => {
           company: result.company._id
         }))
       } else {
-        setError(result.error || 'Error creating company')
+        showError(result.error || 'Error creating company')
       }
     } catch (error) {
-      setError('Server connection error')
+      showError('Server connection error')
     } finally {
       setIsLoading(false)
     }
@@ -409,25 +406,6 @@ export const ClientsTable = ({ currentUser }) => {
           </div>
         }
       />
-
-      {/* Error/Success Messages */}
-      {error && (
-        <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl">
-          <div className="flex items-center">
-            <span className="text-red-500 text-lg mr-2">⚠️</span>
-            <p className="text-red-700 dark:text-red-300 text-sm font-medium">{error}</p>
-          </div>
-        </div>
-      )}
-
-      {success && (
-        <div className="p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl">
-          <div className="flex items-center">
-            <span className="text-green-500 text-lg mr-2">✅</span>
-            <p className="text-green-700 dark:text-green-300 text-sm font-medium">{success}</p>
-          </div>
-        </div>
-      )}
 
       {/* Clients Table */}
       {isLoading ? (
@@ -830,6 +808,19 @@ export const ClientsTable = ({ currentUser }) => {
           </div>
         </div>
       )}
+
+      {/* Delete Confirmation Modal */}
+      <ConfirmationModal
+        isOpen={deleteConfirmation.isOpen}
+        onClose={() => setDeleteConfirmation({ isOpen: false, clientId: null })}
+        onConfirm={confirmDelete}
+        title="Delete Client"
+        message="Are you sure you want to delete this client? This action cannot be undone."
+        confirmText="Delete"
+        cancelText="Cancel"
+        type="danger"
+        isLoading={isLoading}
+      />
     </div>
   )
 }

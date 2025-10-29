@@ -11,6 +11,7 @@ import { ReportsSection } from './components/dashboard/Reports'
 import { ProfilePage } from './components/dashboard/ProfilePage'
 import { UsersPage } from './components/dashboard/UsersPage'
 import { SettingsPage } from './components/dashboard/SettingsPage'
+import { NotificationProvider } from './contexts/NotificationContext'
 import { 
   dashboardStats, 
   recentInvoices, 
@@ -115,40 +116,48 @@ function App() {
   }
 
   if (!isAuthenticated) {
-    return <LoginPage onLogin={handleLogin} />
+    return (
+      <NotificationProvider>
+        <LoginPage onLogin={handleLogin} />
+      </NotificationProvider>
+    )
   }
 
   // Afficher un loader pendant la vérification d'authentification
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-linear-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600 dark:text-gray-400">Vérification de l'authentification...</p>
+      <NotificationProvider>
+        <div className="min-h-screen bg-linear-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 flex items-center justify-center">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+            <p className="text-gray-600 dark:text-gray-400">Vérification de l'authentification...</p>
+          </div>
         </div>
-      </div>
+      </NotificationProvider>
     )
   }
 
   return (
-    <div className="h-screen bg-linear-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 flex flex-col">
-      <Header onLogout={handleLogout} user={user} onShowProfile={handleShowProfile} onShowSettings={handleShowSettings} />
-      
-      <div className="flex flex-1 overflow-hidden">
-        <Sidebar 
-          activeSection={activeSection}
-          setActiveSection={setActiveSection}
-          navigationItems={navigationItems}
-          user={user}
-        />
+    <NotificationProvider>
+      <div className="h-screen bg-linear-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 flex flex-col">
+        <Header onLogout={handleLogout} user={user} onShowProfile={handleShowProfile} onShowSettings={handleShowSettings} />
         
-        <main className="flex-1 overflow-y-auto">
-          <div className="p-8 h-full">
-            {renderContent()}
-          </div>
-        </main>
+        <div className="flex flex-1 overflow-hidden">
+          <Sidebar 
+            activeSection={activeSection}
+            setActiveSection={setActiveSection}
+            navigationItems={navigationItems}
+            user={user}
+          />
+          
+          <main className="flex-1 overflow-y-auto">
+            <div className="p-8 h-full">
+              {renderContent()}
+            </div>
+          </main>
+        </div>
       </div>
-    </div>
+    </NotificationProvider>
   )
 }
 

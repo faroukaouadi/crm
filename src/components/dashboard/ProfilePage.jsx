@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react'
 import authService from '../../services/authService'
+import { useNotification } from '../../contexts/NotificationContext'
 
 export const ProfilePage = ({ user, onUserUpdate, onClose }) => {
   const [isEditing, setIsEditing] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
-  const [error, setError] = useState('')
-  const [success, setSuccess] = useState('')
+  const { showSuccess, showError } = useNotification()
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -31,36 +31,31 @@ export const ProfilePage = ({ user, onUserUpdate, onClose }) => {
       ...prev,
       [name]: value
     }))
-    // Effacer les messages d'erreur/succès
-    if (error) setError('')
-    if (success) setSuccess('')
   }
 
   const handleSubmit = async (e) => {
     e.preventDefault()
     setIsLoading(true)
-    setError('')
-    setSuccess('')
 
-        try {
-          const result = await authService.updateProfile({
-            firstName: formData.firstName,
-            lastName: formData.lastName,
-            email: formData.email
-          })
-          
-          if (result.success) {
-            onUserUpdate(result.user)
-            setSuccess('Profile updated successfully!')
-            setIsEditing(false)
-          } else {
-            setError(result.error || 'Error updating profile')
-          }
-        } catch (error) {
-          setError('Server connection error')
-        } finally {
-          setIsLoading(false)
-        }
+    try {
+      const result = await authService.updateProfile({
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        email: formData.email
+      })
+      
+      if (result.success) {
+        onUserUpdate(result.user)
+        showSuccess('Profile updated successfully!')
+        setIsEditing(false)
+      } else {
+        showError(result.error || 'Error updating profile')
+      }
+    } catch (error) {
+      showError('Server connection error')
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   const handleCancel = () => {
@@ -71,8 +66,6 @@ export const ProfilePage = ({ user, onUserUpdate, onClose }) => {
       role: user.role || ''
     })
     setIsEditing(false)
-    setError('')
-    setSuccess('')
   }
 
       const getRoleDisplay = (role) => {
@@ -115,25 +108,6 @@ export const ProfilePage = ({ user, onUserUpdate, onClose }) => {
               Back to Dashboard
             </button>
       </div>
-
-      {/* Error/Success Messages */}
-      {error && (
-        <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl">
-          <div className="flex items-center">
-            <span className="text-red-500 text-lg mr-2">⚠️</span>
-            <p className="text-red-700 dark:text-red-300 text-sm font-medium">{error}</p>
-          </div>
-        </div>
-      )}
-
-      {success && (
-        <div className="p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl">
-          <div className="flex items-center">
-            <span className="text-green-500 text-lg mr-2">✅</span>
-            <p className="text-green-700 dark:text-green-300 text-sm font-medium">{success}</p>
-          </div>
-        </div>
-      )}
 
       {/* User Information */}
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 space-y-6">

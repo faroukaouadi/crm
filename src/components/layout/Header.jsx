@@ -8,7 +8,7 @@ export const Header = ({ onLogout, user, onShowProfile, onShowSettings }) => (
         <div className="w-10 h-10 bg-linear-to-br from-blue-600 to-purple-600 rounded-xl flex items-center justify-center shadow-sm">
           <span className="text-white font-bold text-lg">CRM</span>
         </div>
-        <h1 className="text-xl font-bold text-gray-900 dark:text-white">CRM System</h1>
+        <h1 className="text-xl font-bold text-gray-900 dark:text-white">CRM System by Farouk</h1>
       </div>
       <div className="flex items-center space-x-3">
         <button className="bg-gray-100 dark:bg-gray-700 rounded-full p-2 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors">

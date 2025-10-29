@@ -8,13 +8,14 @@ import invoiceService from '../../services/invoiceService'
 import clientService from '../../services/clientService'
 import pdfService from '../../services/pdfService'
 import { QuoteView } from './QuoteView'
+import { useNotification } from '../../contexts/NotificationContext'
+import { ConfirmationModal } from '../ui/ConfirmationModal'
 
 export const QuotesTable = ({ currentUser }) => {
   const [quotes, setQuotes] = useState([])
   const [clients, setClients] = useState([])
   const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState('')
-  const [success, setSuccess] = useState('')
+  const { showSuccess, showError } = useNotification()
   const [editingQuote, setEditingQuote] = useState(null)
   const [isEditing, setIsEditing] = useState(false)
   const [isAdding, setIsAdding] = useState(false)
@@ -23,6 +24,7 @@ export const QuotesTable = ({ currentUser }) => {
   const [isRejecting, setIsRejecting] = useState(false)
   const [viewingQuote, setViewingQuote] = useState(null)
   const [isViewing, setIsViewing] = useState(false)
+  const [deleteConfirmation, setDeleteConfirmation] = useState({ isOpen: false, quoteId: null })
   const [formData, setFormData] = useState({
     client: '',
     issueDate: new Date().toISOString().split('T')[0],
@@ -56,16 +58,15 @@ export const QuotesTable = ({ currentUser }) => {
 
   const loadQuotes = async () => {
     setIsLoading(true)
-    setError('')
     try {
       const result = await quoteService.getQuotes()
       if (result.success) {
         setQuotes(result.quotes)
       } else {
-        setError(result.error || 'Error loading quotes')
+        showError(result.error || 'Error loading quotes')
       }
     } catch (error) {
-      setError('Server connection error')
+      showError('Server connection error')
     } finally {
       setIsLoading(false)
     }
@@ -157,10 +158,10 @@ export const QuotesTable = ({ currentUser }) => {
     try {
       const result = await pdfService.generateQuotePDFCustom(quote)
       if (!result.success) {
-        setError(result.error || 'Error generating PDF')
+        showError(result.error || 'Error generating PDF')
       }
     } catch (error) {
-      setError('Error generating PDF')
+      showError('Error generating PDF')
     }
   }
 
@@ -257,33 +258,31 @@ export const QuotesTable = ({ currentUser }) => {
   const handleSubmit = async (e) => {
     e.preventDefault()
     setIsLoading(true)
-    setError('')
-    setSuccess('')
 
     try {
       let result
       if (isAdding) {
         result = await quoteService.createQuote(formData)
         if (result.success) {
-          setSuccess('Quote created successfully!')
+          showSuccess('Quote created successfully!')
           setIsAdding(false)
           loadQuotes()
         } else {
-          setError(result.error || 'Error creating quote')
+          showError(result.error || 'Error creating quote')
         }
       } else {
         result = await quoteService.updateQuote(editingQuote._id, formData)
         if (result.success) {
-          setSuccess('Quote updated successfully!')
+          showSuccess('Quote updated successfully!')
           setIsEditing(false)
           setEditingQuote(null)
           loadQuotes()
         } else {
-          setError(result.error || 'Error updating quote')
+          showError(result.error || 'Error updating quote')
         }
       }
     } catch (error) {
-      setError('Server connection error')
+      showError('Server connection error')
     } finally {
       setIsLoading(false)
     }
@@ -292,21 +291,19 @@ export const QuotesTable = ({ currentUser }) => {
   const handleAcceptSubmit = async (e) => {
     e.preventDefault()
     setIsLoading(true)
-    setError('')
-    setSuccess('')
 
     try {
       const result = await quoteService.acceptQuote(editingQuote._id)
       if (result.success) {
-        setSuccess('Quote accepted successfully!')
+        showSuccess('Quote accepted successfully!')
         setIsAccepting(false)
         setEditingQuote(null)
         loadQuotes()
       } else {
-        setError(result.error || 'Error accepting quote')
+        showError(result.error || 'Error accepting quote')
       }
     } catch (error) {
-      setError('Server connection error')
+      showError('Server connection error')
     } finally {
       setIsLoading(false)
     }
@@ -315,21 +312,19 @@ export const QuotesTable = ({ currentUser }) => {
   const handleRejectSubmit = async (e) => {
     e.preventDefault()
     setIsLoading(true)
-    setError('')
-    setSuccess('')
 
     try {
       const result = await quoteService.rejectQuote(editingQuote._id, rejectionData.rejectionReason)
       if (result.success) {
-        setSuccess('Quote rejected successfully!')
+        showSuccess('Quote rejected successfully!')
         setIsRejecting(false)
         setEditingQuote(null)
         loadQuotes()
       } else {
-        setError(result.error || 'Error rejecting quote')
+        showError(result.error || 'Error rejecting quote')
       }
     } catch (error) {
-      setError('Server connection error')
+      showError('Server connection error')
     } finally {
       setIsLoading(false)
     }
@@ -338,43 +333,43 @@ export const QuotesTable = ({ currentUser }) => {
   const handleConvertSubmit = async (e) => {
     e.preventDefault()
     setIsLoading(true)
-    setError('')
-    setSuccess('')
 
     try {
       const result = await quoteService.convertToInvoice(editingQuote._id, conversionData)
       if (result.success) {
-        setSuccess('Quote converted to invoice successfully!')
+        showSuccess('Quote converted to invoice successfully!')
         setIsConverting(false)
         setEditingQuote(null)
         loadQuotes()
       } else {
-        setError(result.error || 'Error converting quote to invoice')
+        showError(result.error || 'Error converting quote to invoice')
       }
     } catch (error) {
-      setError('Server connection error')
+      showError('Server connection error')
     } finally {
       setIsLoading(false)
     }
   }
 
-  const handleDelete = async (quoteId) => {
-    if (!window.confirm('Are you sure you want to delete this quote?')) {
-      return
-    }
+  const handleDelete = (quoteId) => {
+    setDeleteConfirmation({ isOpen: true, quoteId })
+  }
+
+  const confirmDelete = async () => {
+    if (!deleteConfirmation.quoteId) return
 
     setIsLoading(true)
-    setError('')
     try {
-      const result = await quoteService.deleteQuote(quoteId)
+      const result = await quoteService.deleteQuote(deleteConfirmation.quoteId)
       if (result.success) {
-        setSuccess('Quote deleted successfully!')
+        showSuccess('Quote deleted successfully!')
+        setDeleteConfirmation({ isOpen: false, quoteId: null })
         loadQuotes()
       } else {
-        setError(result.error || 'Error deleting quote')
+        showError(result.error || 'Error deleting quote')
       }
     } catch (error) {
-      setError('Server connection error')
+      showError('Server connection error')
     } finally {
       setIsLoading(false)
     }
@@ -389,8 +384,6 @@ export const QuotesTable = ({ currentUser }) => {
     setIsViewing(false)
     setEditingQuote(null)
     setViewingQuote(null)
-    setError('')
-    setSuccess('')
   }
 
   const getStatusBadge = (status) => {
@@ -507,25 +500,6 @@ export const QuotesTable = ({ currentUser }) => {
           </div>
         }
       />
-
-      {/* Error/Success Messages */}
-      {error && (
-        <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl">
-          <div className="flex items-center">
-            <span className="text-red-500 text-lg mr-2">⚠️</span>
-            <p className="text-red-700 dark:text-red-300 text-sm font-medium">{error}</p>
-          </div>
-        </div>
-      )}
-
-      {success && (
-        <div className="p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl">
-          <div className="flex items-center">
-            <span className="text-green-500 text-lg mr-2">✅</span>
-            <p className="text-green-700 dark:text-green-300 text-sm font-medium">{success}</p>
-          </div>
-        </div>
-      )}
 
       {/* Quotes Table */}
       {isLoading ? (
@@ -1075,6 +1049,19 @@ export const QuotesTable = ({ currentUser }) => {
           onDownloadPDF={handleDownloadPDF}
         />
       )}
+
+      {/* Delete Confirmation Modal */}
+      <ConfirmationModal
+        isOpen={deleteConfirmation.isOpen}
+        onClose={() => setDeleteConfirmation({ isOpen: false, quoteId: null })}
+        onConfirm={confirmDelete}
+        title="Delete Quote"
+        message="Are you sure you want to delete this quote? This action cannot be undone."
+        confirmText="Delete"
+        cancelText="Cancel"
+        type="danger"
+        isLoading={isLoading}
+      />
     </div>
   )
 }

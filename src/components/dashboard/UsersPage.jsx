@@ -3,15 +3,17 @@ import { DataTable, TableCell } from '../ui/DataTable'
 import { StatusBadge } from '../ui/StatCard'
 import { SectionHeader } from '../ui/StatCard'
 import authService from '../../services/authService'
+import { useNotification } from '../../contexts/NotificationContext'
+import { ConfirmationModal } from '../ui/ConfirmationModal'
 
 export const UsersPage = ({ currentUser }) => {
   const [users, setUsers] = useState([])
   const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState('')
-  const [success, setSuccess] = useState('')
+  const { showSuccess, showError } = useNotification()
   const [editingUser, setEditingUser] = useState(null)
   const [isEditing, setIsEditing] = useState(false)
   const [isAdding, setIsAdding] = useState(false)
+  const [deleteConfirmation, setDeleteConfirmation] = useState({ isOpen: false, userId: null })
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -33,16 +35,15 @@ export const UsersPage = ({ currentUser }) => {
 
   const loadUsers = async () => {
     setIsLoading(true)
-    setError('')
     try {
       const result = await authService.getUsers()
       if (result.success) {
         setUsers(result.users)
       } else {
-        setError(result.error || 'Erreur lors du chargement des utilisateurs')
+        showError(result.error || 'Erreur lors du chargement des utilisateurs')
       }
     } catch (error) {
-      setError('Erreur de connexion au serveur')
+      showError('Erreur de connexion au serveur')
     } finally {
       setIsLoading(false)
     }
@@ -87,8 +88,6 @@ export const UsersPage = ({ currentUser }) => {
   const handleSubmit = async (e) => {
     e.preventDefault()
     setIsLoading(true)
-    setError('')
-    setSuccess('')
 
     try {
       let result
@@ -96,48 +95,50 @@ export const UsersPage = ({ currentUser }) => {
         // Create new user
         result = await authService.createUser(formData)
         if (result.success) {
-          setSuccess('User created successfully!')
+          showSuccess('User created successfully!')
           setIsAdding(false)
           loadUsers() // Reload the list
         } else {
-          setError(result.error || 'Error creating user')
+          showError(result.error || 'Error creating user')
         }
       } else {
         // Update existing user
         result = await authService.updateUser(editingUser._id, formData)
         if (result.success) {
-          setSuccess('User updated successfully!')
+          showSuccess('User updated successfully!')
           setIsEditing(false)
           setEditingUser(null)
           loadUsers() // Reload the list
         } else {
-          setError(result.error || 'Error updating user')
+          showError(result.error || 'Error updating user')
         }
       }
     } catch (error) {
-      setError('Server connection error')
+      showError('Server connection error')
     } finally {
       setIsLoading(false)
     }
   }
 
-  const handleDelete = async (userId) => {
-    if (!window.confirm('Are you sure you want to delete this user?')) {
-      return
-    }
+  const handleDelete = (userId) => {
+    setDeleteConfirmation({ isOpen: true, userId })
+  }
+
+  const confirmDelete = async () => {
+    if (!deleteConfirmation.userId) return
 
     setIsLoading(true)
-    setError('')
     try {
-      const result = await authService.deleteUser(userId)
+      const result = await authService.deleteUser(deleteConfirmation.userId)
       if (result.success) {
-        setSuccess('User deleted successfully!')
+        showSuccess('User deleted successfully!')
+        setDeleteConfirmation({ isOpen: false, userId: null })
         loadUsers() // Reload the list
       } else {
-        setError(result.error || 'Error deleting user')
+        showError(result.error || 'Error deleting user')
       }
     } catch (error) {
-      setError('Server connection error')
+      showError('Server connection error')
     } finally {
       setIsLoading(false)
     }
@@ -147,8 +148,6 @@ export const UsersPage = ({ currentUser }) => {
     setIsEditing(false)
     setIsAdding(false)
     setEditingUser(null)
-    setError('')
-    setSuccess('')
   }
 
   const getRoleDisplay = (role) => {
@@ -277,25 +276,6 @@ export const UsersPage = ({ currentUser }) => {
           </div>
         }
       />
-
-      {/* Error/Success Messages */}
-      {error && (
-        <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl">
-          <div className="flex items-center">
-            <span className="text-red-500 text-lg mr-2">⚠️</span>
-            <p className="text-red-700 dark:text-red-300 text-sm font-medium">{error}</p>
-          </div>
-        </div>
-      )}
-
-      {success && (
-        <div className="p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl">
-          <div className="flex items-center">
-            <span className="text-green-500 text-lg mr-2">✅</span>
-            <p className="text-green-700 dark:text-green-300 text-sm font-medium">{success}</p>
-          </div>
-        </div>
-      )}
 
       {/* Users Table */}
       {isLoading ? (
@@ -436,6 +416,19 @@ export const UsersPage = ({ currentUser }) => {
           </div>
         </div>
       )}
+
+      {/* Delete Confirmation Modal */}
+      <ConfirmationModal
+        isOpen={deleteConfirmation.isOpen}
+        onClose={() => setDeleteConfirmation({ isOpen: false, userId: null })}
+        onConfirm={confirmDelete}
+        title="Delete User"
+        message="Are you sure you want to delete this user? This action cannot be undone."
+        confirmText="Delete"
+        cancelText="Cancel"
+        type="danger"
+        isLoading={isLoading}
+      />
     </div>
   )
 }
