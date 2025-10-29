@@ -10,6 +10,7 @@ import { QuotesTable } from './components/dashboard/QuotesTable'
 import { ReportsSection } from './components/dashboard/Reports'
 import { ProfilePage } from './components/dashboard/ProfilePage'
 import { UsersPage } from './components/dashboard/UsersPage'
+import { SettingsPage } from './components/dashboard/SettingsPage'
 import { 
   dashboardStats, 
   recentInvoices, 
@@ -74,6 +75,14 @@ function App() {
     setActiveSection('dashboard')
   }
 
+  const handleShowSettings = () => {
+    setActiveSection('settings')
+  }
+
+  const handleCloseSettings = () => {
+    setActiveSection('dashboard')
+  }
+
   const renderContent = () => {
     switch (activeSection) {
       case 'dashboard':
@@ -85,19 +94,21 @@ function App() {
           </div>
         )
       case 'invoices':
-        return <InvoicesTable invoices={recentInvoices} />
+        return <InvoicesTable currentUser={user} />
       case 'clients':
         return <ClientsTable currentUser={user} />
       case 'companies':
         return <CompaniesTable currentUser={user} />
       case 'quotes':
-        return <QuotesTable quotes={quotes} />
+        return <QuotesTable currentUser={user} />
       case 'reports':
         return <ReportsSection stats={dashboardStats} />
       case 'profile':
         return <ProfilePage user={user} onUserUpdate={handleUserUpdate} onClose={handleCloseProfile} />
       case 'users':
         return <UsersPage currentUser={user} />
+      case 'settings':
+        return <SettingsPage onClose={handleCloseSettings} />
       default:
         return <DashboardStats stats={dashboardStats} />
     }
@@ -121,7 +132,7 @@ function App() {
 
   return (
     <div className="h-screen bg-linear-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 flex flex-col">
-      <Header onLogout={handleLogout} user={user} onShowProfile={handleShowProfile} />
+      <Header onLogout={handleLogout} user={user} onShowProfile={handleShowProfile} onShowSettings={handleShowSettings} />
       
       <div className="flex flex-1 overflow-hidden">
         <Sidebar 

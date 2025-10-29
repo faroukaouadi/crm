@@ -1,9 +1,24 @@
 const express = require('express');
 const Company = require('../models/Company');
 const Client = require('../models/Client');
+const Invoice = require('../models/Invoice');
 const authMiddleware = require('../middleware/auth');
 
 const router = express.Router();
+
+// Helper function to calculate totalValue from invoices
+async function calculateClientTotalValue(clientId) {
+  try {
+    const result = await Invoice.aggregate([
+      { $match: { client: clientId } },
+      { $group: { _id: null, total: { $sum: '$totalAmount' } } }
+    ]);
+    return result.length > 0 ? result[0].total : 0;
+  } catch (error) {
+    console.error('Error calculating totalValue:', error);
+    return 0;
+  }
+}
 
 // @route   GET /api/companies
 // @desc    Get all companies
@@ -242,11 +257,21 @@ router.get('/:id/clients', authMiddleware, async (req, res) => {
     const clients = await Client.find({ 
       company: req.params.id,
       createdBy: req.user._id 
-    }).populate('company', 'name');
+    }).populate('company', 'name email phone');
+    
+    // Calculate totalValue for each client from their invoices
+    const clientsWithTotalValue = await Promise.all(
+      clients.map(async (client) => {
+        const totalValue = await calculateClientTotalValue(client._id);
+        const clientObj = client.toObject();
+        clientObj.totalValue = totalValue;
+        return clientObj;
+      })
+    );
     
     res.json({
       success: true,
-      data: { clients }
+      data: { clients: clientsWithTotalValue }
     });
   } catch (error) {
     console.error('Get company clients error:', error);

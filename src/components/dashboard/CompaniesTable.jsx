@@ -240,14 +240,14 @@ export const CompaniesTable = ({ currentUser }) => {
   }
 
   const toggleExpanded = async (companyId) => {
-    if (expandedCompany === companyId) {
-      setExpandedCompany(null)
-    } else {
-      setExpandedCompany(companyId)
-      if (!companyClients[companyId]) {
-        await loadCompanyClients(companyId)
-      }
+    setExpandedCompany(companyId)
+    if (!companyClients[companyId]) {
+      await loadCompanyClients(companyId)
     }
+  }
+
+  const handleCloseClientsModal = () => {
+    setExpandedCompany(null)
   }
 
   const getStatusBadge = (status) => {
@@ -308,7 +308,7 @@ export const CompaniesTable = ({ currentUser }) => {
           onClick={() => toggleExpanded(company._id)}
           className="px-3 py-1 bg-blue-600 text-white rounded text-xs hover:bg-blue-700 transition-colors"
         >
-          {expandedCompany === company._id ? 'Hide' : 'View'} Clients
+          View Clients
         </button>
         <button
           onClick={() => handleEdit(company)}
@@ -381,44 +381,6 @@ export const CompaniesTable = ({ currentUser }) => {
         <div className="space-y-4">
           <DataTable headers={headers} data={companies} renderRow={renderRow} />
           
-          {/* Expanded Company Clients */}
-          {expandedCompany && companyClients[expandedCompany] && (
-            <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-6">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-                Clients for {companies.find(c => c._id === expandedCompany)?.name}
-              </h3>
-              {companyClients[expandedCompany].length > 0 ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {companyClients[expandedCompany].map((client) => (
-                    <div key={client._id} className="bg-white dark:bg-gray-700 rounded-lg p-4 border border-gray-200 dark:border-gray-600">
-                      <div className="flex items-center space-x-3 mb-2">
-                        <div className="w-8 h-8 bg-linear-to-br from-blue-600 to-purple-600 rounded-full flex items-center justify-center">
-                          <span className="text-white font-bold text-xs">
-                            {client.firstName?.charAt(0)}{client.lastName?.charAt(0)}
-                          </span>
-                        </div>
-                        <div>
-                          <div className="font-medium text-gray-900 dark:text-white">
-                            {client.firstName} {client.lastName}
-                          </div>
-                          <div className="text-xs text-gray-500 dark:text-gray-400">{client.position}</div>
-                        </div>
-                      </div>
-                      <div className="text-sm text-gray-600 dark:text-gray-400">
-                        <div>Email: {client.email}</div>
-                        <div>Phone: {client.phone || 'N/A'}</div>
-                        <div>Status: {client.status}</div>
-                        <div>Deals: {client.deals}</div>
-                        <div>Value: {formatCurrency(client.totalValue)}</div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-gray-500 dark:text-gray-400">No clients found for this company.</p>
-              )}
-            </div>
-          )}
         </div>
       )}
 
@@ -754,6 +716,76 @@ export const CompaniesTable = ({ currentUser }) => {
                   </button>
                 </div>
               </form>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Company Clients Modal */}
+      {expandedCompany && companyClients[expandedCompany] && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-5xl max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-2xl font-bold text-gray-900 dark:text-white">
+                  Clients for {companies.find(c => c._id === expandedCompany)?.name}
+                </h3>
+                <button
+                  onClick={handleCloseClientsModal}
+                  className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 text-2xl"
+                >
+                  ✕
+                </button>
+              </div>
+
+              {companyClients[expandedCompany].length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {companyClients[expandedCompany].map((client) => (
+                    <div key={client._id} className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 border border-gray-200 dark:border-gray-600 hover:shadow-lg transition-shadow">
+                      <div className="flex items-center space-x-3 mb-3">
+                        <div className="w-10 h-10 bg-linear-to-br from-blue-600 to-purple-600 rounded-full flex items-center justify-center">
+                          <span className="text-white font-bold text-sm">
+                            {client.firstName?.charAt(0)}{client.lastName?.charAt(0)}
+                          </span>
+                        </div>
+                        <div>
+                          <div className="font-semibold text-gray-900 dark:text-white">
+                            {client.firstName} {client.lastName}
+                          </div>
+                          <div className="text-xs text-gray-500 dark:text-gray-400">
+                            {client.position || 'No position'}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="space-y-2 text-sm">
+                        <div className="flex items-center text-gray-600 dark:text-gray-400">
+                          <span className="font-medium mr-2">Email:</span>
+                          <span>{client.email}</span>
+                        </div>
+                        <div className="flex items-center text-gray-600 dark:text-gray-400">
+                          <span className="font-medium mr-2">Phone:</span>
+                          <span>{client.phone || 'N/A'}</span>
+                        </div>
+                        <div className="flex items-center text-gray-600 dark:text-gray-400">
+                          <span className="font-medium mr-2">Status:</span>
+                          <span className="capitalize">{client.status}</span>
+                        </div>
+                       
+                        <div className="flex items-center pt-2 border-t border-gray-300 dark:border-gray-600">
+                          <span className="font-semibold text-gray-900 dark:text-white mr-2">Total Value:</span>
+                          <span className="font-bold text-blue-600 dark:text-blue-400">
+                            {formatCurrency(client.totalValue || 0)}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-12">
+                  <p className="text-gray-500 dark:text-gray-400 text-lg">No clients found for this company.</p>
+                </div>
+              )}
             </div>
           </div>
         </div>

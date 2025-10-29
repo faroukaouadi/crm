@@ -1,8 +1,23 @@
 const express = require('express');
 const Client = require('../models/Client');
+const Invoice = require('../models/Invoice');
 const authMiddleware = require('../middleware/auth');
 
 const router = express.Router();
+
+// Helper function to calculate totalValue from invoices
+async function calculateClientTotalValue(clientId) {
+  try {
+    const result = await Invoice.aggregate([
+      { $match: { client: clientId } },
+      { $group: { _id: null, total: { $sum: '$totalAmount' } } }
+    ]);
+    return result.length > 0 ? result[0].total : 0;
+  } catch (error) {
+    console.error('Error calculating totalValue:', error);
+    return 0;
+  }
+}
 
 // @route   GET /api/clients
 // @desc    Get all clients
@@ -35,15 +50,26 @@ router.get('/', authMiddleware, async (req, res) => {
       .sort(sort)
       .limit(limit * 1)
       .skip((page - 1) * limit)
+      .populate('company', 'name email phone')
       .populate('createdBy', 'firstName lastName email')
       .populate('updatedBy', 'firstName lastName email');
+
+    // Calculate totalValue for each client from their invoices
+    const clientsWithTotalValue = await Promise.all(
+      clients.map(async (client) => {
+        const totalValue = await calculateClientTotalValue(client._id);
+        const clientObj = client.toObject();
+        clientObj.totalValue = totalValue;
+        return clientObj;
+      })
+    );
 
     const total = await Client.countDocuments(filter);
 
     res.json({
       success: true,
       data: {
-        clients,
+        clients: clientsWithTotalValue,
         total,
         page: parseInt(page),
         pages: Math.ceil(total / limit)
@@ -68,6 +94,7 @@ router.get('/:id', authMiddleware, async (req, res) => {
       _id: req.params.id, 
       createdBy: req.user._id 
     })
+    .populate('company', 'name email phone address')
     .populate('createdBy', 'firstName lastName email')
     .populate('updatedBy', 'firstName lastName email');
 
@@ -78,9 +105,14 @@ router.get('/:id', authMiddleware, async (req, res) => {
       });
     }
 
+    // Calculate totalValue from invoices
+    const totalValue = await calculateClientTotalValue(client._id);
+    const clientObj = client.toObject();
+    clientObj.totalValue = totalValue;
+
     res.json({
       success: true,
-      data: { client }
+      data: { client: clientObj }
     });
 
   } catch (error) {
@@ -97,20 +129,30 @@ router.get('/:id', authMiddleware, async (req, res) => {
 // @access  Private
 router.post('/', authMiddleware, async (req, res) => {
   try {
+    // Remove totalValue from body - it's calculated from invoices
+    const { totalValue, ...clientDataWithoutTotal } = req.body;
+    
     const clientData = {
-      ...req.body,
-      createdBy: req.user._id
+      ...clientDataWithoutTotal,
+      createdBy: req.user._id,
+      totalValue: 0 // Set to 0 initially, will be calculated from invoices
     };
 
     const client = new Client(clientData);
     await client.save();
 
+    await client.populate('company', 'name email phone');
     await client.populate('createdBy', 'firstName lastName email');
+
+    // Calculate totalValue from invoices (will be 0 for new client)
+    const calculatedTotalValue = await calculateClientTotalValue(client._id);
+    const clientObj = client.toObject();
+    clientObj.totalValue = calculatedTotalValue;
 
     res.status(201).json({
       success: true,
       message: 'Client created successfully',
-      data: { client }
+      data: { client: clientObj }
     });
 
   } catch (error) {
@@ -143,15 +185,19 @@ router.post('/', authMiddleware, async (req, res) => {
 // @access  Private
 router.put('/:id', authMiddleware, async (req, res) => {
   try {
+    // Remove totalValue from body - it's calculated from invoices
+    const { totalValue, ...updateDataWithoutTotal } = req.body;
+    
     const client = await Client.findOneAndUpdate(
       { _id: req.params.id, createdBy: req.user._id },
       { 
-        ...req.body,
+        ...updateDataWithoutTotal,
         updatedBy: req.user._id,
         updatedAt: new Date()
       },
       { new: true, runValidators: true }
     )
+    .populate('company', 'name email phone address')
     .populate('createdBy', 'firstName lastName email')
     .populate('updatedBy', 'firstName lastName email');
 
@@ -162,10 +208,15 @@ router.put('/:id', authMiddleware, async (req, res) => {
       });
     }
 
+    // Calculate totalValue from invoices
+    const calculatedTotalValue = await calculateClientTotalValue(client._id);
+    const clientObj = client.toObject();
+    clientObj.totalValue = calculatedTotalValue;
+
     res.json({
       success: true,
       message: 'Client updated successfully',
-      data: { client }
+      data: { client: clientObj }
     });
 
   } catch (error) {

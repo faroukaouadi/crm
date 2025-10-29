@@ -7,6 +7,9 @@ require('dotenv').config({ path: './config.env' });
 const authRoutes = require('./routes/auth');
 const clientRoutes = require('./routes/clients');
 const companyRoutes = require('./routes/companies');
+const invoiceRoutes = require('./routes/invoices');
+const quoteRoutes = require('./routes/quotes');
+const settingsRoutes = require('./routes/settings');
 
 const app = express();
 
@@ -35,6 +38,9 @@ mongoose.connect(process.env.MONGODB_URI)
 app.use('/api/auth', authRoutes);
 app.use('/api/clients', clientRoutes);
 app.use('/api/companies', companyRoutes);
+app.use('/api/invoices', invoiceRoutes);
+app.use('/api/quotes', quoteRoutes);
+app.use('/api/settings', settingsRoutes);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {

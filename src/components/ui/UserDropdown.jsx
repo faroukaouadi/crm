@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react'
 
-export const UserDropdown = ({ onLogout, user, onShowProfile }) => {
+export const UserDropdown = ({ onLogout, user, onShowProfile, onShowSettings }) => {
   const [isOpen, setIsOpen] = useState(false)
   const dropdownRef = useRef(null)
 
@@ -27,8 +27,7 @@ export const UserDropdown = ({ onLogout, user, onShowProfile }) => {
 
       const menuItems = [
         { icon: '👤', label: 'Profile', action: onShowProfile },
-        { icon: '⚙️', label: 'Settings', action: () => console.log('Settings clicked') },
-        { icon: '🔧', label: 'App Settings', action: () => console.log('App settings clicked') },
+        { icon: '⚙️', label: 'Company Settings', action: onShowSettings },
         { icon: '🚪', label: 'Logout', action: onLogout, isLast: true }
       ]
 
